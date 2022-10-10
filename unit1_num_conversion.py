@@ -4,16 +4,20 @@
 # functions to define
 def to_base_10(num, start_base):
     num_list = [int(d) for d in str(num)]
-    print(num_list)
-    for item in num_list:
-        item * start_base ** len(num_list)
-    print(sum(num_list))
+    new_num_list = []
+    while len(num_list) > 0:
+        for item in num_list:
+            new_item = item * (start_base ** (len(num_list)-1))
+            print(f"{item}*{start_base}^{len(num_list)-1}")
+            print(num_list)
+            new_num_list.append(new_item)
+            num_list.pop(0)
+    print(new_num_list)
+    print(sum(new_num_list))
 
 def from_base_10(num, end_base):
     pass
 
-n = 43365644
-print([int(d) for d in str(n)])
 
 # program loop
 name = input("What is your name? ")
@@ -32,3 +36,11 @@ while True:
     else:
         to_base_10(num_start, num_base1)
         from_base_10(num_start, num_base2)
+
+    proceed = input("Would you like to convert another number? y or n ")
+    if proceed == 'y':
+        pass
+    elif proceed == 'n':
+        break
+    else:
+        print("I don't understand this input. I guess you wanna keep going? \n")
