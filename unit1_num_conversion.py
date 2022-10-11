@@ -2,22 +2,33 @@
 # Martin Goff
 
 # functions to define
+
+
 def to_base_10(num, start_base):
     num_list = [int(d) for d in str(num)]
     new_num_list = []
-    while len(num_list) > 0:
-        for item in num_list:
-            new_item = item * (start_base ** (len(num_list)-1))
-            print(f"{item}*{start_base}^{len(num_list)-1}")
-            print(num_list)
-            new_num_list.append(new_item)
-            num_list.pop(0)
+    power = len(num_list)-1
+    for item in num_list:
+        new_item = item * (start_base ** power)
+        print(f"{item}*{start_base}^{power}")
+        print(num_list)
+        new_num_list.append(new_item)
+        power -=1
     print(new_num_list)
     print(sum(new_num_list))
 
 def from_base_10(num, end_base):
-    pass
+    num = int(num)
+    new_num = []
+    while num // end_base != 0:
+        remainder = num % end_base
+        print(remainder)
+        new_num.append(str(remainder))
+        num //= end_base
+    print(new_num)
+    
 
+print(f"{15//16} R {15%16}")
 
 # program loop
 name = input("What is your name? ")
