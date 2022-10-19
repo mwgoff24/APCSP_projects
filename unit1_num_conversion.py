@@ -6,17 +6,19 @@ from curses.ascii import isdigit
 
 
 letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+print(list(letters))
 
 def to_base_10(num, start_base):
-    num_list = [int(d) for d in str(num)]
+    num_list = list(num)
+    print(num_list)
     new_num_list = []
     power = len(num_list)-1
     letter_number = 10
     for item in num_list:
         if item.isdigit():
+            item = int(item)
             new_item = item * (start_base ** power)
             print(f"{item}*{start_base}^{power}")
-            print(num_list)
             new_num_list.append(new_item)
             power -=1
         else:
@@ -41,9 +43,19 @@ def from_base_10(num, end_base):
             remainder = num % end_base
             new_num.append(str(remainder))
     new_num.reverse()
-    print(''.join(new_num))
-    
+    print(new_num)
+    letter_number = 10
+    for item in new_num:
+        if item.isdigit() and int(item) >= 10:
+            item = letters.index(letters)
 
+    print(''.join(new_num))
+
+item_list = ["4", "E"]
+for item in item_list:
+    if item.isdigit():
+        int(item)
+        print(item)
 
 # program loop
 name = input("What is your name? ")
