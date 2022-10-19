@@ -6,11 +6,9 @@ from curses.ascii import isdigit
 
 
 letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-print(list(letters))
 
 def to_base_10(num, start_base):
     num_list = list(num)
-    print(num_list)
     new_num_list = []
     power = len(num_list)-1
     letter_number = 10
@@ -25,12 +23,15 @@ def to_base_10(num, start_base):
             for character in letters:
                 if item == character:
                     new_item = letter_number * (start_base ** power)
+                    print(f"{item}*{start_base}^{power}")
                     new_num_list.append(new_item)
+                    power -= 1
                 else:
                     letter_number += 1
-
     print(new_num_list)
-    print(sum(new_num_list))
+    global new_to
+    new_to = sum(new_num_list)
+    return new_to
 
 def from_base_10(num, end_base):
     num = int(num)
@@ -44,18 +45,15 @@ def from_base_10(num, end_base):
             new_num.append(str(remainder))
     new_num.reverse()
     print(new_num)
-    letter_number = 10
     for item in new_num:
         if item.isdigit() and int(item) >= 10:
-            item = letters.index(letters)
+            index = new_num.index(item)
+            new_num.remove(item)
+            new_num.insert(index, letters[int(item)-10])
+    global new_from
+    new_from = ''.join(new_num)
+    return new_from
 
-    print(''.join(new_num))
-
-item_list = ["4", "E"]
-for item in item_list:
-    if item.isdigit():
-        int(item)
-        print(item)
 
 # program loop
 name = input("What is your name? ")
@@ -69,11 +67,17 @@ while True:
 
     if num_base1 == 10:
         from_base_10(num_start, num_base2)
+        print("\n")
+        print(f"{name}, your new number is {new_from}.")
     elif num_base2 == 10:
         to_base_10(num_start, num_base1)
+        print("\n")
+        print(f"{name}, your new number is {new_to}.")
     else:
         to_base_10(num_start, num_base1)
-        from_base_10(num_start, num_base2)
+        from_base_10(new_to, num_base2)
+        print("\n")
+        print(f"{name}, your new number is {new_from}.")
 
     proceed = input("Would you like to convert another number? y or n ")
     if proceed == 'y':
