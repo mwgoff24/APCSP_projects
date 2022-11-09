@@ -48,6 +48,7 @@ def load_texture_pair(filename):
         arcade.load_texture(filename, flipped_horizontally=True),
     ]
 
+
 class PlayerCharacter(arcade.Sprite):
     """Player sprite"""
 
@@ -80,10 +81,67 @@ class PlayerCharacter(arcade.Sprite):
 
         # load textures for walking
         self.walk_textures = []
+        for i in range(8):
+            texture = load_texture_pair(f"{main_path}_walk{i}.png")
+            self.walk_textures.append(texture)
+
+        # load textures for climbing
+        self.climbing_textures = []
         texture = arcade.load_texture(f"{main_path}_climb0.png")
         self.climbing_textures.append(texture)
         texture = arcade.load_texture(f"{main_path}_climb1.png")
         self.climbing_textures.append(texture)
+
+        # set initial texture
+        self.texture = self.idle_texture_pair[0]
+
+        # hit box will be based on the first image used. If want to specify
+        # a diff hit box, do it like commented out code:
+        # set_hit_box = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
+        self.hit_box = self.texture.hit_box_points
+
+    def update_animation(self, delta_time: float = 1 / 60):
+        
+        # figure out if need to flip face left or right
+        if self.change_x < 0 and self.character_face_direction == RIGHT_FACING:
+            self.character_face_direction = LEFT_FACING
+        elif self.change_x > 0 and self.character_face_direction == LEFT_FACING:
+            self.character_face_direction = RIGHT_FACING
+
+        # climbing animation
+        if self.is_on_ladder:
+            self.climbing = True
+        if not self.is_on_ladder and self.climbing:
+            self.climbing = False
+        if self.climbing and abs(self.change_y) > 1:
+            self.cur_texture += 1
+            if self.cur_texture > 7:
+                self.cur_texture = 0
+        if self.climbing:
+            self.texture = self.climbing_textures[self.cur_texture // 4]
+            return
+
+        # jumping animation
+        if self.change_y > 0 and not self.is_on_ladder:
+            self.texture = self.jump_texture_pair[self.character_face_direction]
+            return
+        elif self.change_y < 0 and not self.is_on_ladder:
+            self.texture = self.fall_texture_pair[self.character_face_direction]
+            return
+
+        # idle animation
+        if self.change_x == 0:
+            self.texture = self.idle_texture_pair[self.character_face_direction]
+            return
+
+        # walking animation
+        self.cur_texture += 1
+        if self.cur_texture> 7:
+            self.cur_texture = 0
+        self.texture = self.walk_textures[self.cur_texture][
+            self.character_face_direction
+        ]
+
 
 class MyGame(arcade.Window):
     '''
@@ -101,6 +159,13 @@ class MyGame(arcade.Window):
         # set path to start with this program
         file_path = os.path.dirname(os.path.abspath(__file__))
         os.chdir(file_path)
+        
+        # track current state of what key is pressed
+        self.left_pressed = False
+        self.right_pressed = False
+        self.up_pressed = False
+        self.down_pressed = False
+        self.jump_needs_reset = False
         
         # TileMap Object
         self.tile_map = None
@@ -131,7 +196,7 @@ class MyGame(arcade.Window):
         self.game_over = arcade.load_sound(":resources:sounds/gameover1.wav")
 
     def setup(self):
-        """Set up game here. Call this function to reset game."""
+        """Set up game here. Call this function to restart game."""
 
         # set up cameras
         self.camera = arcade.Camera(self.width, self.height)
@@ -159,7 +224,7 @@ class MyGame(arcade.Window):
         # load in TileMap
         self.tile_map = arcade.load_tilemap(map_name, TILE_SCALING, layer_options)
 
-        # initialize scene with our TileMap, this will automatically add all layers
+        # initialize scene with TileMap, this will automatically add all layers
         # from the map as SpriteLists in the scene in the proper order
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
 
@@ -167,11 +232,10 @@ class MyGame(arcade.Window):
         self.score = 0
 
         # set up player at specific coordinates
-        image_source = ":resources:images/animated_characters/female_adventurer/femaleAdventurer_idle.png"
-        self.player_sprite = arcade.Sprite(image_source, CHARACTER_SCALING)
+        self.player_sprite = PlayerCharacter()
         self.player_sprite.center_x = PLAYER_START_X
         self.player_sprite.center_y = PLAYER_START_Y
-        self.scene.add_sprite("Player", self.player_sprite)
+        self.scene.add_sprite(LAYER_NAME_PLAYER, self.player_sprite)
 
         # calculate right edge of my_map in pixels
         self.end_of_map = self.tile_map.width * GRID_PIXEL_SIZE
@@ -192,6 +256,7 @@ class MyGame(arcade.Window):
 
     def on_draw(self):
         """Render the screen."""
+        
         # clear the screen to the background color
         self.clear()
 
@@ -214,36 +279,74 @@ class MyGame(arcade.Window):
             18
         )
 
+        # draw hit boxes.
+        # for wall in self.wall_list:
+        #     wall.draw_hit_box(arcade.color.BLACK, 3)
+        #
+        # self.player_sprite.draw_hit_box(arcade.color.RED, 3)
+
+    def process_keychange(self):
+        """
+        Called when change a key up/down or move on/off a ladder.
+        """
+        # process up/down
+        if self.up_pressed and not self.down_pressed:
+            if self.physics_engine.is_on_ladder():
+                self.player_sprite.change_y = PLAYER_MOVEMENT_SPEED
+            elif (
+                self.physics_engine.can_jump(y_distance=10)
+                and not self.jump_needs_reset
+            ):
+                self.player_sprite.change_y = PLAYER_JUMP_SPEED
+                self.jump_needs_reset = True
+                arcade.play_sound(self.jump_sound)
+        elif self.down_pressed and not self.up_pressed:
+            if self.physics_engine.is_on_ladder():
+                self.player_sprite.change_y = -PLAYER_MOVEMENT_SPEED
+
+        # process up/down when on ladder and no movement
+        if self.physics_engine.is_on_ladder():
+            if not self.up_pressed and not self.down_pressed:
+                self.player_sprite.change_y = 0
+            elif self.up_pressed and self.down_pressed:
+                self.player_sprite.change_y = 0
+
+        # process left/right
+        if self.right_pressed and not self.left_pressed:
+            self.player_sprite.change_x = PLAYER_MOVEMENT_SPEED
+        elif self.left_pressed and not self.right_pressed:
+            self.player_sprite.change_x = -PLAYER_MOVEMENT_SPEED
+        else:
+            self.player_sprite.change_x = 0
+
     def on_key_press(self, key, modifiers):
         """called when a certain key is pressed"""
 
         if key == arcade.key.UP or key == arcade.key.W:
-            if self.physics_engine.is_on_ladder():
-                self.player_sprite.change_y = PLAYER_MOVEMENT_SPEED
-            elif self.physics_engine.can_jump():
-                self.player_sprite.change_y = PLAYER_JUMP_SPEED
-                arcade.play_sound(self.jump_sound)
+            self.up_pressed = True
         elif key == arcade.key.DOWN or key == arcade.key.S:
-            if self.physics_engine.is_on_ladder():
-                self.player_sprite.change_y = -PLAYER_MOVEMENT_SPEED
+            self.down_pressed = True
         elif key == arcade.key.LEFT or key == arcade.key.A:
-            self.player_sprite.change_x = -PLAYER_MOVEMENT_SPEED
+            self.left_pressed = True
         elif key == arcade.key.RIGHT or key == arcade.key.D:
-            self.player_sprite.change_x = PLAYER_MOVEMENT_SPEED
+            self.right_pressed = True
+
+        self.process_keychange()
 
     def on_key_release(self, key, modifiers):
         """called when user releases key"""
 
         if key == arcade.key.UP or key == arcade.key.W:
-            if self.physics_engine.is_on_ladder():
-                self.player_sprite.change_y = 0
+            self.up_pressed = False
+            self.jump_needs_reset = False
         elif key == arcade.key.DOWN or key == arcade.key.S:
-            if self.physics_engine.is_on_ladder():
-                self.player_sprite.change_y = 0
+            self.down_pressed = False
         elif key == arcade.key.LEFT or key == arcade.key.A:
-            self.player_sprite.change_x = 0
+            self.left_pressed = False
         elif key == arcade.key.RIGHT or key == arcade.key.D:
-            self.player_sprite.change_x = 0
+            self.right_pressed = False
+
+        self.process_keychange()
 
     def center_camera_to_player(self):
         screen_center_x = self.player_sprite.center_x - (self.camera.viewport_width / 2)
@@ -256,16 +359,30 @@ class MyGame(arcade.Window):
             screen_center_y = 0
         player_centered = screen_center_x, screen_center_y
 
-        self.camera.move_to(player_centered)
+        self.camera.move_to(player_centered, 0.2)
 
-    def update(self, delta_time):
+    def on_update(self, delta_time):
         """movement and game logic"""
+
         # move player with physics engine
         self.physics_engine.update()
 
         # update animations
+        if self.physics_engine.can_jump():
+            self.player_sprite.can_jump = False
+        else:
+            self.player_sprite.can_jump = True
+
+        if self.physics_engine.is_on_ladder() and not self.physics_engine.can_jump():
+            self.player_sprite.is_on_ladder = True
+            self.process_keychange()
+        else:
+            self.player_sprite.is_on_ladder = False
+            self.process_keychange()
+
+        # update animations, again
         self.scene.update_animation(
-            delta_time, [LAYER_NAME_COINS, LAYER_NAME_BACKGROUND]
+            delta_time, [LAYER_NAME_COINS, LAYER_NAME_BACKGROUND, LAYER_NAME_PLAYER]
         )
 
         # update walls, used with moving platforms
