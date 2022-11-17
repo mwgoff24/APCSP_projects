@@ -1,7 +1,7 @@
 # arcade platformer
 # Martin Goff
 
-# this code is my duplicated code from the website, currently on step 16, line 536
+# this code is my duplicated code from the website, currently on step 17, line 515
 
 import math
 import os
@@ -172,10 +172,10 @@ class PlayerCharacter(Entity):
     def update_animation(self, delta_time: float = 1 / 60):
         
         # figure out if need to flip face left or right
-        if self.change_x < 0 and self.character_face_direction == RIGHT_FACING:
-            self.character_face_direction = LEFT_FACING
-        elif self.change_x > 0 and self.character_face_direction == LEFT_FACING:
-            self.character_face_direction = RIGHT_FACING
+        if self.change_x < 0 and self.facing_direction == RIGHT_FACING:
+            self.facing_direction = LEFT_FACING
+        elif self.change_x > 0 and self.facing_direction == LEFT_FACING:
+            self.facing_direction = RIGHT_FACING
 
         # climbing animation
         if self.is_on_ladder:
@@ -192,10 +192,10 @@ class PlayerCharacter(Entity):
 
         # jumping animation
         if self.change_y > 0 and not self.is_on_ladder:
-            self.texture = self.jump_texture_pair[self.character_face_direction]
+            self.texture = self.jump_texture_pair[self.facing_direction]
             return
         elif self.change_y < 0 and not self.is_on_ladder:
-            self.texture = self.fall_texture_pair[self.character_face_direction]
+            self.texture = self.fall_texture_pair[self.facing_direction]
             return
 
         # idle animation
@@ -210,7 +210,32 @@ class PlayerCharacter(Entity):
         self.texture = self.walk_textures[self.cur_texture][self.facing_direction]
 
 
-class MyGame(arcade.Window):
+class MainMenu(arcade.View):
+    """Class that manages the 'menu' window."""
+
+    def on_show_view(self):
+        """Called when switching to this view."""
+        arcade.set_background_color(arcade.color.WHITE)
+
+    def on_draw(self):
+        """Draw the menu."""
+        self.window.clear()
+        arcade.draw_text(
+            "Main menu - Click to play",
+            SCREEN_WIDTH / 2,
+            SCREEN_HEIGHT / 2,
+            arcade.color.BLACK,
+            font_size=30,
+            anchor_x="center"
+        )
+
+    def on_mouse_press(self, _x,_y, _button, _modifiers):
+        """Use a mouse press to advance to the 'game' view."""
+        game_view = GameView()
+        self.window.show_view(game_view)
+
+
+class GameView(arcade.Window):
     '''
     Main application class
     '''
@@ -219,9 +244,7 @@ class MyGame(arcade.Window):
         """
         Initializer for game
         """
-
-        # call parent class and set up window
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        super().__init__()
 
         # set path to start with this program
         file_path = os.path.dirname(os.path.abspath(__file__))
@@ -346,7 +369,7 @@ class MyGame(arcade.Window):
                 enemy.boundary_right = my_object.properties["boundary_right"]
             if "change_x" in my_object.properties:
                 enemy.change_x = my_object.properties["change_x"]
-            self.scene.add_sprite_list(LAYER_NAME_ENEMIES)
+        self.scene.add_sprite(LAYER_NAME_ENEMIES, enemy)
 
         # add bullet spritelist to scene
         self.scene.add_sprite_list(LAYER_NAME_BULLETS)    
@@ -364,6 +387,9 @@ class MyGame(arcade.Window):
             ladders=self.scene[LAYER_NAME_LADDERS],
             walls=self.scene[LAYER_NAME_PLATFORMS]
         )
+
+    def on_show_view(self):
+        self.setup()
 
     def on_draw(self):
         """Render the screen."""
@@ -445,6 +471,11 @@ class MyGame(arcade.Window):
         if key == arcade.key.Q:
             self.shoot_pressed = True
 
+        if key == arcade.key.PLUS:
+            self.camera.zoom(0.01)
+        elif key == arcade.key.MINUS:
+            self.camera.zoom(-0.01)
+
         self.process_keychange()
 
     def on_key_release(self, key, modifiers):
@@ -461,9 +492,12 @@ class MyGame(arcade.Window):
             self.right_pressed = False
 
         if key == arcade.key.Q:
-            self.shoot_pressed = True
+            self.shoot_pressed = False
 
         self.process_keychange()
+
+    def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
+        self.camera.zoom(-0.01 * scroll_y)
 
     def center_camera_to_player(self, speed=0.2):
         screen_center_x = self.player_sprite.center_x - (self.camera.viewport_width / 2)
@@ -534,7 +568,9 @@ class MyGame(arcade.Window):
         )
 
         # update moving platforms, enemies, and bullets
-        self.scene.update(LAYER_NAME_MOVING_PLATFORMS, LAYER_NAME_ENEMIES)
+        self.scene.update(
+            [LAYER_NAME_MOVING_PLATFORMS, LAYER_NAME_ENEMIES, LAYER_NAME_BULLETS]
+            )
 
         # see if enemy hit boundary and must reverse
         for enemy in self.scene[LAYER_NAME_ENEMIES]:
@@ -552,6 +588,42 @@ class MyGame(arcade.Window):
             ):
                 enemy.change_x *= -1
 
+        for bullet in self.scene[LAYER_NAME_BULLETS]:
+            hit_list = arcade.check_for_collision_with_lists(
+                bullet,
+                [
+                    self.scene[LAYER_NAME_ENEMIES],
+                    self.scene[LAYER_NAME_PLATFORMS],
+                    self.scene[LAYER_NAME_MOVING_PLATFORMS],
+                ],
+            )
+
+            if hit_list:
+                bullet.remove_from_sprite_lists()
+
+                for collision in hit_list:
+                    if (
+                        self.scene[LAYER_NAME_ENEMIES]
+                        in collision.sprite_lists
+                    ):
+                        # the collision was with an enemy
+                        collision.health -= BULLET_DAMAGE
+
+                        if collision.health <= 0:
+                            collision.remove_from_sprite_lists()
+                            self.score += 100
+
+                        # hit sound
+                        arcade.play_sound(self.hit_sound)
+
+                return
+
+            if (bullet.right < 0) or (
+                bullet.left
+                > (self.tile_map.width * self.tile_map.tile_width) * TILE_SCALING
+            ):
+                bullet.remove_from_sprite_lists()
+
         player_collision_list = arcade.check_for_collision_with_lists(
             self.player_sprite,
             [
@@ -559,11 +631,6 @@ class MyGame(arcade.Window):
                 self.scene[LAYER_NAME_ENEMIES],
             ],
         )
-
-        # see if any coins are hit
-        # coin_hit_list = arcade.check_for_collision_with_list(
-        #     self.player_sprite, self.scene[LAYER_NAME_COINS]
-        # )
 
         # loop through each coin hit (if any) and remove it
         for collision in player_collision_list:
@@ -590,7 +657,7 @@ class MyGame(arcade.Window):
 
 def main():
     """main function"""
-    window = MyGame()
+    window = GameView()
     window.setup()
     arcade.run()
 
