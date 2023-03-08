@@ -11,3 +11,8 @@ with open('word_list.csv', newline='') as csvfile:
     word = random.choice(word_list)
     word = list(word)
     print(word)
+
+    censored_word = []
+    for item in word:
+        censored_word.append('*')
+    print(censored_word)
