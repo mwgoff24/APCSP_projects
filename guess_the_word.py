@@ -8,12 +8,12 @@ with open('word_list.csv', newline='') as csvfile:
     word_list = []
     for row in reader:
         word_list.append(row['WORD'])
-    print(word_list)
 
     word = word_list[0]
     print(f"Your word is: {word}.")
     word = list(word)
-    print(word)
+    word_size = len(word)
+    print(word_size)
 
     censored_word = []
     for item in word:
@@ -22,15 +22,24 @@ with open('word_list.csv', newline='') as csvfile:
 
     lives = 5
 
-# game loop
-while True:
-    print(censored_word)
-    choice = input("Do you want to guess a letter or try to solve? ")
-    if choice == 'letter':
-        for item in word:
-            if item == choice:
-                censored_word[word.index(choice)] = choice
-                print("Well done! You guessed correctly!")
-            else:
-                print("Nope. You guessed wrong!")
-                lives -= 1
+    # # instructions
+    # print("Welcome to Guess The Word! Here, a word is picked randomly for you to guess letter by letter.")
+    # print("If you guess incorrectly, you lose a life. You have five lives to start with.")
+    # print("You can also solve a word by typing out the word in full.")
+    # print("But be careful; if you guess the full word wrong, you lose two lives instead. \n")
+
+    # game loop
+    while True:
+        print(f"You have {lives} lives currently.")
+        choice = input("Do you want to guess a letter or solve? Type in l or s. ")
+        if choice == 'l':
+            guess = input("Guess a letter in this mystery word: ")
+            for index in range(word_size):
+                if word[index] == guess:
+                    print(index)
+                    censored_word[index] = guess
+                    print(censored_word)
+        elif choice == 's':
+            pass
+        else:
+            print("That is not an available option.")
