@@ -2,25 +2,35 @@
 import csv
 import random
 
+# opens up large word list
 with open('word_list.csv', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
 
+    # variables to define
+    lives = 5
+    points = 0
     word_list = []
     for row in reader:
         word_list.append(row['WORD'])
-
-    word = word_list[0]
-    print(f"Your word is: {word}.")
+    word = word_list[0] # will become random word after coding is finished
+    censored_word = []
+    
+    # setup code
+    print(f"Your word is: {word}.") # for debugging
     word = list(word)
     word_size = len(word)
-    print(word_size)
-
-    censored_word = []
+    print(word_size) # for debugging
     for item in word:
         censored_word.append('*')
-    print(censored_word)
+    print(censored_word) # this one will stay
 
-    lives = 5
+    # functions
+
+    def loss(word):
+        if lives <= 0:
+            lives = 0
+        print(f"Oh no! You now have {lives} lives! The correct word was {word}.")
+
 
     # # instructions
     # print("Welcome to Guess The Word! Here, a word is picked randomly for you to guess letter by letter.")
@@ -30,16 +40,37 @@ with open('word_list.csv', newline='') as csvfile:
 
     # game loop
     while True:
-        print(f"You have {lives} lives currently.")
+        # every time the game loops, lives are reported to player
+        print(f"You have {lives} lives and {points} points currently.")
         choice = input("Do you want to guess a letter or solve? Type in l or s. ")
+
         if choice == 'l':
-            guess = input("Guess a letter in this mystery word: ")
-            for index in range(word_size):
-                if word[index] == guess:
-                    print(index)
-                    censored_word[index] = guess
-                    print(censored_word)
+            letter_guess = input("Guess a letter in this mystery word: ")
+            if letter_guess in word:
+                print("Correct guess!")
+                for index in range(word_size):
+                    if word[index] == letter_guess:
+                        censored_word[index] = letter_guess
+                        print(censored_word)
+                        advance = input("Press ENTER:")
+                        points += 100
+            elif letter_guess not in word:
+                print("Whoops! That letter is not in the word!")
+                lives -= 1
+                if lives <= 1:
+                    loss(''.join(word))
+
         elif choice == 's':
-            pass
+            word = ''.join(word)
+            solve = input("Alright, then. What is the word? ")
+            if solve == word:
+                points += 1000
+                print("Good job! You guessed the word!")
+            else:
+                print("Nope! You just lost two lives!")
+                lives -= 2
+                if lives <= 1:
+                    loss(''.join(word))
+
         else:
             print("That is not an available option.")
