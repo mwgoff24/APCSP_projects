@@ -7,13 +7,14 @@ with open('word_list.csv', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
 
     # variables to define
-    lives = 5
-    points = 0
+    attempts = 5
+    gameplay = True
     word_list = []
     for row in reader:
         word_list.append(row['WORD'])
-    word = word_list[0] # will become random word after coding is finished
+    word = random.choice(word_list) # will become random word after coding is finished
     censored_word = []
+    guessed_letters = []
     
     # setup code
     print(f"Your word is: {word}.") # for debugging
@@ -27,50 +28,59 @@ with open('word_list.csv', newline='') as csvfile:
     # functions
 
     def loss(word):
-        if lives <= 0:
-            lives = 0
-        print(f"Oh no! You now have {lives} lives! The correct word was {word}.")
+        global gameplay, attempts
+        if attempts <= 0:
+            attempts = 0
+        print(f"Oh no! You are at {attempts} attempts! The correct word was {word}. Thanks for playing!")
+        gameplay = False
 
+    def letter():
+        global gameplay, attempts
+        letter_guess = input("\nGuess a letter in this mystery word: ")
+        if letter_guess in guessed_letters:
+            print("You already guessed this!\n")
+        elif letter_guess in word:
+            print("\nCorrect guess!")
+            guessed_letters.append(letter_guess)
+            for index in range(word_size):
+                if word[index] == letter_guess:
+                    censored_word[index] = letter_guess
+                    print(censored_word)
+                    advance = input("\nPress ENTER:")
+                    if censored_word == word:
+                        print("Good job! You figured out the word! Thanks for playing!")
+                        gameplay = False
+        elif letter_guess not in word:
+            print("Whoops! That letter is not in the word!")
+            guessed_letters.append(letter_guess)
+            attempts -= 1
+            if attempts < 1:
+                loss(''.join(word))
 
-    # # instructions
-    # print("Welcome to Guess The Word! Here, a word is picked randomly for you to guess letter by letter.")
-    # print("If you guess incorrectly, you lose a life. You have five lives to start with.")
-    # print("You can also solve a word by typing out the word in full.")
-    # print("But be careful; if you guess the full word wrong, you lose two lives instead. \n")
+    def solve():
+        global gameplay, attempts, word
+        word = ''.join(word)
+        solve = input("Alright, then. What is the word? ")
+        if solve == word:
+            print("Good job! You solved the word! Thanks for playing!")
+            gameplay = False
+        else:
+            print("Nope! You just lost two lives!")
+            attempts -= 2
+            if attempts < 1:
+                loss(''.join(word))
 
     # game loop
-    while True:
+    while gameplay == True:
         # every time the game loops, lives are reported to player
-        print(f"You have {lives} lives and {points} points currently.")
+        if attempts == 1:
+            print(f"\nYou have {attempts} attempt currently.")
+        else:
+            print(f"\nYou have {attempts} attempts currently.")
         choice = input("Do you want to guess a letter or solve? Type in l or s. ")
-
         if choice == 'l':
-            letter_guess = input("Guess a letter in this mystery word: ")
-            if letter_guess in word:
-                print("Correct guess!")
-                for index in range(word_size):
-                    if word[index] == letter_guess:
-                        censored_word[index] = letter_guess
-                        print(censored_word)
-                        advance = input("Press ENTER:")
-                        points += 100
-            elif letter_guess not in word:
-                print("Whoops! That letter is not in the word!")
-                lives -= 1
-                if lives <= 1:
-                    loss(''.join(word))
-
+            letter()
         elif choice == 's':
-            word = ''.join(word)
-            solve = input("Alright, then. What is the word? ")
-            if solve == word:
-                points += 1000
-                print("Good job! You guessed the word!")
-            else:
-                print("Nope! You just lost two lives!")
-                lives -= 2
-                if lives <= 1:
-                    loss(''.join(word))
-
+            solve()
         else:
             print("That is not an available option.")
