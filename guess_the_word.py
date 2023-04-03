@@ -29,6 +29,14 @@ with open('word_list.csv', newline='') as csvfile:
         print(f"Oh no! You are at {attempts} attempts! The correct word was {word}. Thanks for playing!")
         gameplay = False
 
+    # runs at beginning of program to provide user with what the game is like
+    def instructions():
+        print("You will start off with a censored word and must try and guess it letter by letter. \n"
+        "Each incorrect guess costs one life. \n"
+        "Once you think you know the word, you can try to solve it. But be warned: \n"
+        "If your word is incorrect, you will lose two lives instead of one. \n"
+        "When you run out of lives, your word will be revealed and the game is over. \n")
+
     # runs when player guesses a letter
     def letter():
         global gameplay, attempts
@@ -74,12 +82,14 @@ with open('word_list.csv', newline='') as csvfile:
                 loss(''.join(word))
 
     # setup code
+    instructions()
     word = list(word)
     word_size = len(word)
     # makes identical word list except this one is censored
     for item in word:
         censored_word.append('*')
     print(censored_word)
+
 
     # game loop
     while gameplay == True:
