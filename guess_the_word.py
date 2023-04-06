@@ -53,7 +53,7 @@ with open('word_list.csv', newline='') as csvfile:
                     censored_word[index] = letter_guess
                     print(censored_word)
                     # used so printings of censored_word appear one at a time
-                    input("\nPress ENTER:")
+                    input("\nPress ENTER to proceed:")
                     if censored_word == word:
                         # runs if player guesses every letter but does not solve word
                         print("Good job! You figured out the word! Thanks for playing!")
